@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.miapp.dto.LoginRequest;
 import com.example.miapp.model.Usuario;
 import com.example.miapp.repository.UsuarioRepository;
 
@@ -32,80 +33,85 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class UsuarioController {
     @Autowired
     private UsuarioRepository usuarioRepository;
-    
+
     @GetMapping
     @Operation(summary = "Obtiene a los usuarios", description = "Obtiene una lista de todos los usuarios")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Operación exitosa",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Usuario.class)))
+            @ApiResponse(responseCode = "200", description = "Operación exitosa", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Usuario.class)))
     })
     public ResponseEntity<List<Usuario>> listar() {
         List<Usuario> usuarios = usuarioRepository.findAll();
-        if (usuarios.isEmpty()){
-            return ResponseEntity.noContent().build();        
+        if (usuarios.isEmpty()) {
+            return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(usuarios);
     }
-    
+
     @PostMapping
     @Operation(summary = "Ingresa nuevos usuarios", description = "Crea e ingresa nuevos datos de usuarios")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Usuario creado exitosamente",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Usuario.class)))
+            @ApiResponse(responseCode = "200", description = "Usuario creado exitosamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Usuario.class)))
     })
     public ResponseEntity<Usuario> guardar(@RequestBody Usuario usuario) {
 
         usuarioRepository.save(usuario);
         return ResponseEntity.status(HttpStatus.CREATED).body(usuario);
-        
+
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+        return usuarioRepository.findByEmail(request.getEmail())
+                .map(usuario -> {
+                    if (usuario.getPassword().equals(request.getPassword())) {
+                        return ResponseEntity.ok(usuario); // login correcto
+                    } else {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body("Contraseña incorrecta");
+                    }
+                })
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Usuario no encontrado"));
+    }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtiene usuarios por ID", description = "Obtiene los datos de un usuario especifico por ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Operación exitosa",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Usuario.class))),
+            @ApiResponse(responseCode = "200", description = "Operación exitosa", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Usuario.class))),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
     public ResponseEntity<Usuario> buscar(@PathVariable Long id) {
-        try{
+        try {
             Usuario usuario = usuarioRepository.findById(id).get();
             return ResponseEntity.ok(usuario);
         } catch (Exception e) {
-            return ResponseEntity.notFound().build(); 
+            return ResponseEntity.notFound().build();
         }
-        
+
     }
-    
+
     @PutMapping("/{id}")
     @Operation(summary = "Actualiza usuarios por ID", description = "Actualiza los datos de un usuario especificado por su ID")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Usuario actualizado exitosamente",
-                    content = @Content(mediaType = "application/json",
-                            schema = @Schema(implementation = Usuario.class))),
+            @ApiResponse(responseCode = "200", description = "Usuario actualizado exitosamente", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Usuario.class))),
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
     public ResponseEntity<Usuario> actualizar(@PathVariable Long id, @RequestBody Usuario usuario) {
-        try{
+        try {
 
-            
             Usuario usr = usuarioRepository.findById(id).get();
             usr.setId(id);
             usr.setNombre(usuario.getNombre());
             usr.setComuna(usuario.getComuna());
             usr.setEmail(usuario.getEmail());
-            usr.setPassword(usuario.getPassword());   
+            usr.setPassword(usuario.getPassword());
             usr.setFechaCreacion(usuario.getFechaCreacion());
             usr.setRegion(usuario.getRegion());
             usr.setTelefono(usuario.getTelefono());
 
             usuarioRepository.save(usr);
-            return ResponseEntity.ok(usuario); 
-        }catch(Exception e){
+            return ResponseEntity.ok(usuario);
+        } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
     }
@@ -117,10 +123,10 @@ public class UsuarioController {
             @ApiResponse(responseCode = "404", description = "Usuario no encontrado")
     })
     public ResponseEntity<?> eliminar(@PathVariable Long id) {
-        try{
+        try {
             usuarioRepository.deleteById(id);
             return ResponseEntity.noContent().build();
-        }catch(Exception e){
+        } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }
     }
